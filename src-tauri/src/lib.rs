@@ -21,6 +21,19 @@ pub struct Meeting {
 }
 
 // ----------------------
+// Safe Temp File (RAII)
+// ----------------------
+struct SafeTempFile {
+    pub path: PathBuf,
+}
+
+impl Drop for SafeTempFile {
+    fn drop(&mut self) {
+        let _ = std::fs::remove_file(&self.path);
+    }
+}
+
+// ----------------------
 // Backend Storage (JSON)
 // ----------------------
 
@@ -141,7 +154,7 @@ async fn start_listening(api_key: String, target_lang: String, source: String, a
     let target_lang_clone = target_lang.clone();
 
     // Canale per comunicare i file audio pronti dal microfono al traduttore
-    let (tx, rx) = mpsc::channel::<String>();
+    let (tx, rx) = mpsc::channel::<PathBuf>();
 
     // 1. THREAD TRADUTTORE
     let api_key_worker = api_key_clone.clone();
@@ -152,8 +165,12 @@ async fn start_listening(api_key: String, target_lang: String, source: String, a
     std::thread::spawn(move || {
         while is_listening_worker.load(Ordering::Relaxed) {
             if let Ok(filepath) = rx.recv_timeout(Duration::from_millis(500)) {
+                // Avvolgi il path in un RAII guard. Appena questo scope finisce, il file si cancella
+                // Questo impedisce leak di file temporanei su disco se la chiamata di rete panica.
+                let temp_guard = SafeTempFile { path: filepath };
+                
                 let result = tauri::async_runtime::block_on(
-                    translate_audio_with_openai(&filepath, &api_key_worker, &target_lang_worker)
+                    translate_audio_with_openai(&temp_guard.path, &api_key_worker, &target_lang_worker)
                 );
                 
                 match result {
@@ -169,7 +186,6 @@ async fn start_listening(api_key: String, target_lang: String, source: String, a
                         });
                     }
                 }
-                let _ = std::fs::remove_file(&filepath);
             }
         }
     });
@@ -269,7 +285,7 @@ async fn start_listening(api_key: String, target_lang: String, source: String, a
 fn process_audio_data(
     data: &[f32],
     state_mux: &Arc<Mutex<BufferState>>,
-    tx: &mpsc::Sender<String>,
+    tx: &mpsc::Sender<PathBuf>,
     app: &AppHandle,
     channels: u16,
     sample_rate: u32,
@@ -295,8 +311,9 @@ fn process_audio_data(
         let chunk_rms = (chunk_sq_sum / state.samples.len() as f32).sqrt();
 
         if chunk_rms > SILENCE_THRESHOLD_RMS {
-            // Usa la directory temp del sistema per garantire la scrittura
-            let filename = format!("{}/temp_capture_{}.wav", std::env::temp_dir().to_string_lossy(), state.file_counter);
+            // Usa PathBuf::join() invece della manipolazione stringhe per evitare 
+            // incroci brutali tra slash (\ su Windows, / su Mac)
+            let filename = std::env::temp_dir().join(format!("temp_capture_{}.wav", state.file_counter));
             state.file_counter += 1;
 
             let spec = hound::WavSpec {
@@ -332,7 +349,7 @@ async fn stop_listening(app: AppHandle) -> Result<(), String> {
     Ok(())
 }
 
-async fn translate_audio_with_openai(filepath: &str, api_key: &str, target_lang: &str) -> anyhow::Result<String> {
+async fn translate_audio_with_openai(filepath: &std::path::Path, api_key: &str, target_lang: &str) -> anyhow::Result<String> {
     let client = reqwest::Client::new();
     let audio_file = tokio::fs::read(filepath).await?;
     

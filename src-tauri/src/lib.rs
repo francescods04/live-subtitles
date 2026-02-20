@@ -4,12 +4,14 @@ use reqwest::multipart;
 use serde::{Deserialize, Serialize};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex, mpsc};
-use std::time::Duration;
 use tauri::{AppHandle, Emitter, Manager};
 use std::fs;
+use std::time::Duration;
 use std::path::PathBuf;
 
-const SILENCE_THRESHOLD_RMS: f32 = 0.0001; // Lowered to catch quiet speakers
+const SILENCE_THRESHOLD_RMS: f32 = 0.0001;
+
+use tokio::sync::Mutex as AsyncMutex;
 
 #[derive(Deserialize, Serialize, Clone)]
 pub struct Meeting {
@@ -49,61 +51,53 @@ fn get_meetings_file_path(app: &AppHandle) -> Result<PathBuf, String> {
     Ok(app_data_dir.join("meetings.json"))
 }
 
-#[tauri::command]
-async fn get_meetings(app: AppHandle) -> Result<Vec<Meeting>, String> {
-    let file_path = get_meetings_file_path(&app)?;
-    
+pub struct DbState {
+    pub lock: AsyncMutex<()>,
+}
+
+fn read_meetings_internal(file_path: &PathBuf) -> Result<Vec<Meeting>, String> {
     if !file_path.exists() {
         return Ok(Vec::new());
     }
-
-    let contents = fs::read_to_string(&file_path)
-        .map_err(|e| format!("Errore di lettura meetings.json: {}", e))?;
-        
-    if contents.trim().is_empty() {
-        return Ok(Vec::new());
-    }
-
-    let meetings: Vec<Meeting> = serde_json::from_str(&contents)
-        .map_err(|e| format!("Errore di parsing meetings.json: {}", e))?;
-        
-    Ok(meetings)
+    let contents = fs::read_to_string(file_path).map_err(|e| e.to_string())?;
+    if contents.trim().is_empty() { return Ok(Vec::new()); }
+    serde_json::from_str(&contents).map_err(|e| e.to_string())
 }
 
 #[tauri::command]
-async fn save_meeting(meeting: Meeting, app: AppHandle) -> Result<(), String> {
+async fn get_meetings(app: AppHandle, state: tauri::State<'_, DbState>) -> Result<Vec<Meeting>, String> {
+    let _lock = state.lock.lock().await;
     let file_path = get_meetings_file_path(&app)?;
-    let mut meetings = get_meetings(app.clone()).await.unwrap_or_else(|_| Vec::new());
+    read_meetings_internal(&file_path)
+}
+
+#[tauri::command]
+async fn save_meeting(meeting: Meeting, app: AppHandle, state: tauri::State<'_, DbState>) -> Result<(), String> {
+    let _lock = state.lock.lock().await;
+    let file_path = get_meetings_file_path(&app)?;
+    let mut meetings = read_meetings_internal(&file_path).unwrap_or_default();
     
-    // Se il meeting esiste già (stesso ID), aggiornalo. Altrimenti aggiungilo.
     if let Some(pos) = meetings.iter().position(|m| m.id == meeting.id) {
         meetings[pos] = meeting;
     } else {
         meetings.push(meeting);
     }
     
-    let json_data = serde_json::to_string_pretty(&meetings)
-        .map_err(|e| format!("Errore di serializzazione meeting: {}", e))?;
-        
-    fs::write(&file_path, json_data)
-        .map_err(|e| format!("Errore di scrittura meetings.json: {}", e))?;
-        
+    let json_data = serde_json::to_string_pretty(&meetings).map_err(|e| e.to_string())?;
+    fs::write(&file_path, json_data).map_err(|e| format!("Errore di scrittura meetings.json: {}", e))?;
     Ok(())
 }
 
 #[tauri::command]
-async fn delete_meeting(id: String, app: AppHandle) -> Result<(), String> {
+async fn delete_meeting(id: String, app: AppHandle, state: tauri::State<'_, DbState>) -> Result<(), String> {
+    let _lock = state.lock.lock().await;
     let file_path = get_meetings_file_path(&app)?;
-    let mut meetings = get_meetings(app.clone()).await.unwrap_or_else(|_| Vec::new());
+    let mut meetings = read_meetings_internal(&file_path).unwrap_or_default();
     
     meetings.retain(|m| m.id != id);
     
-    let json_data = serde_json::to_string_pretty(&meetings)
-        .map_err(|e| format!("Errore di serializzazione meeting: {}", e))?;
-        
-    fs::write(&file_path, json_data)
-        .map_err(|e| format!("Errore di scrittura meetings.json: {}", e))?;
-        
+    let json_data = serde_json::to_string_pretty(&meetings).map_err(|e| e.to_string())?;
+    fs::write(&file_path, json_data).map_err(|e| format!("Errore di scrittura meetings.json: {}", e))?;
     Ok(())
 }
 
@@ -463,6 +457,9 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .setup(|app| {
+            app.manage(DbState {
+                lock: AsyncMutex::new(()),
+            });
             app.manage(AppState {
                 is_listening: Arc::new(AtomicBool::new(false)),
             });

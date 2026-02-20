@@ -32,9 +32,9 @@ jobs:
 
       - name: install LLVM and Clang (Windows Resource Compiler)
         if: matrix.platform == 'windows-latest'
-        uses: egor-tensin/setup-llvm@v4
-        with:
-          version: 16
+        run: |
+          choco install llvm --version=16.0.6 -y
+          echo "C:\Program Files\LLVM\bin" | Out-File -FilePath $env:GITHUB_PATH -Append
 
       - name: install Rust stable
         uses: dtolnay/rust-toolchain@stable

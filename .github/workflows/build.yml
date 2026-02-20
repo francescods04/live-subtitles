@@ -30,6 +30,12 @@ jobs:
         with:
           node-version: lts/*
 
+      - name: install LLVM and Clang (Windows Resource Compiler)
+        if: matrix.platform == 'windows-latest'
+        uses: egor-tensin/setup-llvm@v4
+        with:
+          version: 16
+
       - name: install Rust stable
         uses: dtolnay/rust-toolchain@stable
         with:

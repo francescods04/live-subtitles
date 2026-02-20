@@ -150,7 +150,7 @@ async fn start_listening(api_key: String, target_lang: String, source: String, a
 
     let is_listening_clone = state.is_listening.clone();
     let app_clone = app.clone();
-    let api_key_clone = api_key.clone();
+    let api_key_clone = api_key.trim().to_string(); // Bug 3 Fix: Remove spaces/newlines that crash auth headers
     let target_lang_clone = target_lang.clone();
 
     // Canale per comunicare i file audio pronti dal microfono al traduttore
@@ -324,12 +324,22 @@ fn process_audio_data(
             };
             
             if let Ok(mut writer) = hound::WavWriter::create(&filename, spec) {
+                let mut write_success = true;
                 for &s in state.samples.iter() {
-                    writer.write_sample(s).unwrap();
+                    // Bug 2 Fix: If OS drops disk write, do NOT panic. 
+                    if writer.write_sample(s).is_err() {
+                        write_success = false;
+                        break;
+                    }
                 }
-                writer.finalize().unwrap();
-                // Notifichiamo il thread traduttore
-                let _ = tx.send(filename);
+                
+                if write_success && writer.finalize().is_ok() {
+                    // Notifichiamo il thread traduttore
+                    let _ = tx.send(filename.clone());
+                } else {
+                    // Fallimento I/O: impediamo l'accumulo di file corrotti
+                    let _ = std::fs::remove_file(&filename);
+                }
             }
         }
         // Ripuliamo il buffer per i prossimi 5 secondi (sia che abbiamo salvato sia che fosse silenzio)

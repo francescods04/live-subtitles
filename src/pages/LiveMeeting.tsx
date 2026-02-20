@@ -37,22 +37,34 @@ export function LiveMeeting() {
 
     // Ascolta gli eventi audio _e_ testo da Rust
     useEffect(() => {
+        let isMounted = true;
         let unlistenAudio: (() => void) | undefined;
         let unlistenText: (() => void) | undefined;
 
         if (isListening) {
             const setupListeners = async () => {
-                unlistenAudio = await listen<AudioLevelPayload>("audio_level", (event) => {
-                    setAudioLevel(Math.min(100, event.payload.rms * 15000));
+                const ua = await listen<AudioLevelPayload>("audio_level", (event) => {
+                    if (isMounted) setAudioLevel(Math.min(100, event.payload.rms * 15000));
                 });
 
-                unlistenText = await listen<SubtitlePayload>("new_subtitle", (event) => {
-                    setTranscripts(prev => [...prev, event.payload.text as string]);
-                    // Auto-scroll in giù
-                    setTimeout(() => {
-                        if (scrollRef.current) scrollRef.current.scrollIntoView({ behavior: "smooth" });
-                    }, 100);
+                const ut = await listen<SubtitlePayload>("new_subtitle", (event) => {
+                    if (isMounted) {
+                        setTranscripts(prev => [...prev, event.payload.text as string]);
+                        // Auto-scroll in giù
+                        setTimeout(() => {
+                            if (scrollRef.current) scrollRef.current.scrollIntoView({ behavior: "smooth" });
+                        }, 100);
+                    }
                 });
+
+                // Se il componente è stato smontato mentre aspettavamo la promise, distruggi i listener appena creati.
+                if (!isMounted) {
+                    ua();
+                    ut();
+                } else {
+                    unlistenAudio = ua;
+                    unlistenText = ut;
+                }
             };
             setupListeners();
         } else {
@@ -60,6 +72,7 @@ export function LiveMeeting() {
         }
 
         return () => {
+            isMounted = false;
             if (unlistenAudio) unlistenAudio();
             if (unlistenText) unlistenText();
         };

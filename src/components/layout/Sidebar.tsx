@@ -3,48 +3,44 @@ import { Mic, Clock, HardDrive } from "lucide-react";
 
 export function Sidebar() {
     return (
-        <aside className="w-64 border-r border-zinc-800 bg-black flex flex-col h-screen">
-            <div className="p-6">
-                <h1 className="text-xl font-bold text-white flex items-center gap-2">
-                    <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-[0_0_15px_rgba(99,102,241,0.4)]">
-                        <Mic size={16} className="text-white" />
-                    </div>
-                    LiveNotes <span className="text-indigo-400 font-light text-sm ml-1">AI</span>
+        <aside className="w-16 md:w-48 flex flex-col h-screen bg-black justify-between py-12 px-4 md:px-8 shrink-0">
+            <div className="space-y-16">
+                <h1 className="text-xl md:text-2xl font-black text-white tracking-tighter w-full text-center md:text-left select-none">
+                    LN<span className="text-zinc-700">.</span>
                 </h1>
+
+                <nav className="flex flex-col gap-8 w-full items-center md:items-start">
+                    <NavLink
+                        to="/"
+                        className={({ isActive }) =>
+                            `flex items-center gap-4 transition-all duration-500 font-bold group ${isActive
+                                ? "text-white opacity-100 translate-x-1"
+                                : "text-zinc-600 hover:text-white hover:opacity-100 hover:translate-x-1"
+                            }`
+                        }
+                    >
+                        <Mic size={18} className="transition-transform duration-500 group-hover:scale-110" />
+                        <span className="hidden md:inline text-xs uppercase tracking-[0.2em]">Record</span>
+                    </NavLink>
+
+                    <NavLink
+                        to="/history"
+                        className={({ isActive }) =>
+                            `flex items-center gap-4 transition-all duration-500 font-bold group ${isActive
+                                ? "text-white opacity-100 translate-x-1"
+                                : "text-zinc-600 hover:text-white hover:opacity-100 hover:translate-x-1"
+                            }`
+                        }
+                    >
+                        <Clock size={18} className="transition-transform duration-500 group-hover:scale-110" />
+                        <span className="hidden md:inline text-xs uppercase tracking-[0.2em]">Vault</span>
+                    </NavLink>
+                </nav>
             </div>
 
-            <nav className="flex-1 px-4 space-y-2 mt-4">
-                <NavLink
-                    to="/"
-                    className={({ isActive }) =>
-                        `flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all font-medium text-sm ${isActive
-                            ? "bg-zinc-900 text-white shadow-inner"
-                            : "text-zinc-400 hover:text-white hover:bg-zinc-900/50"
-                        }`
-                    }
-                >
-                    <Mic size={18} />
-                    New Meeting
-                </NavLink>
-
-                <NavLink
-                    to="/history"
-                    className={({ isActive }) =>
-                        `flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all font-medium text-sm ${isActive
-                            ? "bg-zinc-900 text-white shadow-inner"
-                            : "text-zinc-400 hover:text-white hover:bg-zinc-900/50"
-                        }`
-                    }
-                >
-                    <Clock size={18} />
-                    History
-                </NavLink>
-            </nav>
-
-            <div className="p-4 border-t border-zinc-800">
-                <div className="flex items-center gap-2 px-3 py-2 text-xs font-mono text-zinc-500 bg-zinc-900/50 rounded-lg">
-                    <HardDrive size={14} />
-                    <span>Local Vault Encrypted</span>
+            <div className="flex justify-center md:justify-start">
+                <div className="opacity-20 hover:opacity-100 transition-opacity duration-500">
+                    <HardDrive size={16} className="text-white" />
                 </div>
             </div>
         </aside>

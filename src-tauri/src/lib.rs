@@ -144,7 +144,7 @@ async fn start_listening(api_key: String, target_lang: String, source: String, a
 
     let is_listening_clone = state.is_listening.clone();
     let app_clone = app.clone();
-    let api_key_clone = api_key.trim().to_string(); // Bug 3 Fix: Remove spaces/newlines that crash auth headers
+    let api_key_clone = api_key.clone();
     let target_lang_clone = target_lang.clone();
 
     // Canale per comunicare i file audio pronti dal microfono al traduttore
@@ -220,7 +220,10 @@ async fn start_listening(api_key: String, target_lang: String, source: String, a
 
         let channels = config.channels() as u16;
         let sample_rate = config.sample_rate().0 as u32;
-        let target_samples = (sample_rate * channels as u32 * 5) as usize;
+        // GOLDEN RATIO BUFFER: 4 seconds. 
+        // 2s is too short (Whisper lacks context and hallucinates).
+        // 5s feels laggy. 4s ensures full sentences for perfect accuracy while still feeling fast via Groq.
+        let target_samples = (sample_rate * channels as u32 * 4) as usize;
 
         let buffer_state = Arc::new(Mutex::new(BufferState {
             samples: Vec::with_capacity(target_samples),
@@ -360,15 +363,14 @@ async fn translate_audio_with_openai(filepath: &std::path::Path, api_key: &str, 
     // Whisper's translation API only outputs English.
     if target_lang.eq_ignore_ascii_case("English") {
         let file_part = multipart::Part::bytes(audio_file)
-            .file_name("audio.wav")
-            .mime_str("audio/wav")?;
+            .file_name("audio.wav");
 
         let form = multipart::Form::new()
-            .text("model", "whisper-1")
+            .text("model", "whisper-large-v3")
             .part("file", file_part);
 
         let res = client
-            .post("https://api.openai.com/v1/audio/translations")
+            .post("https://api.groq.com/openai/v1/audio/translations")
             .bearer_auth(api_key)
             .multipart(form)
             .send()
@@ -384,16 +386,15 @@ async fn translate_audio_with_openai(filepath: &std::path::Path, api_key: &str, 
     } else {
         // HYBRID PIPELINE: Translate to other foreign languages via GPT-4o-mini
         let file_part = multipart::Part::bytes(audio_file)
-            .file_name("audio.wav")
-            .mime_str("audio/wav")?;
+            .file_name("audio.wav");
 
         let form = multipart::Form::new()
-            .text("model", "whisper-1")
+            .text("model", "whisper-large-v3")
             .part("file", file_part);
 
         // 1. First extract transcription from original audio
         let trans_res = client
-            .post("https://api.openai.com/v1/audio/transcriptions")
+            .post("https://api.groq.com/openai/v1/audio/transcriptions")
             .bearer_auth(api_key)
             .multipart(form)
             .send()
@@ -409,7 +410,7 @@ async fn translate_audio_with_openai(filepath: &std::path::Path, api_key: &str, 
 
             // 2. Perform raw text-to-text translation 
             let chat_req = serde_json::json!({
-                "model": "gpt-4o-mini",
+                "model": "llama-3.1-8b-instant",
                 "messages": [
                     {
                         "role": "system",
@@ -424,7 +425,7 @@ async fn translate_audio_with_openai(filepath: &std::path::Path, api_key: &str, 
             });
 
             let chat_res = client
-                .post("https://api.openai.com/v1/chat/completions")
+                .post("https://api.groq.com/openai/v1/chat/completions")
                 .bearer_auth(api_key)
                 .json(&chat_req)
                 .send()

@@ -33,14 +33,21 @@
 
   html,
   body {
-    background-color: transparent;
-    color: hsl(var(--foreground));
+    background-color: black;
+    color: white;
     font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    letter-spacing: -0.02em;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  ::selection {
+    background: white;
+    color: black;
   }
 }
 
 .app-root {
-  background-color: hsl(var(--background));
+  background-color: black;
   min-height: 100vh;
 }
 

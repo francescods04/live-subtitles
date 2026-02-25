@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { Link } from "react-router-dom";
-import { Clock, FileText, ChevronRight, Search, Copy, Check } from "lucide-react";
+
 import { Input } from "../components/ui/input";
 import { ScrollArea } from "../components/ui/scroll-area";
 
@@ -47,70 +47,60 @@ export function History() {
     );
 
     return (
-        <div className="flex-1 flex flex-col h-screen bg-zinc-950 p-8 space-y-6">
-            <header className="flex items-center justify-between">
+        <div className="flex-1 flex flex-col h-screen bg-black p-4 md:p-12 space-y-12">
+            <header className="flex flex-col md:flex-row items-start md:items-end justify-between gap-8 md:gap-0">
                 <div>
-                    <h2 className="text-3xl font-extrabold text-white tracking-tight">Meeting History</h2>
-                    <p className="text-sm text-zinc-500 mt-1 font-medium">All your live translated sessions stored securely on disk.</p>
+                    <h2 className="text-4xl md:text-6xl font-black text-white tracking-tighter">Vault.</h2>
+                    <p className="text-[10px] uppercase tracking-[0.2em] text-zinc-600 mt-4">Local encrypted history.</p>
                 </div>
-                <div className="relative w-72">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" size={16} />
+                <div className="relative w-full md:w-[300px]">
                     <Input
-                        placeholder="Search transcripts..."
+                        placeholder="Search Archive..."
                         value={search}
                         onChange={(e) => setSearch(e.target.value)}
-                        className="pl-10 h-10 bg-zinc-900 border-zinc-800 focus-visible:ring-zinc-700 text-sm rounded-xl"
+                        className="h-auto py-2 bg-transparent border-0 border-b border-zinc-800 focus-visible:ring-0 focus-visible:border-white text-xs rounded-none px-0 tracking-widest placeholder:text-zinc-800 transition-colors"
                     />
                 </div>
             </header>
 
-            <div className="flex-1 bg-zinc-900/40 rounded-3xl border border-zinc-800/50 p-6 shadow-inner overflow-hidden flex flex-col">
+            <div className="flex-1 overflow-hidden flex flex-col">
                 {meetings.length === 0 ? (
-                    <div className="flex-1 flex flex-col items-center justify-center text-zinc-700 space-y-4">
-                        <Clock size={48} className="opacity-20" />
-                        <p className="font-medium text-xl opacity-40">No past meetings found.</p>
-                        <p className="text-sm opacity-30 text-center max-w-sm">When you record a Live Meeting, it will be automatically saved here indefinitely.</p>
+                    <div className="flex-1 flex flex-col justify-center text-zinc-800">
+                        <p className="font-light text-2xl tracking-tight max-w-md">No records found.</p>
+                        <p className="text-[10px] uppercase tracking-[0.2em] mt-4 opacity-50">Saved meetings will appear here.</p>
                     </div>
                 ) : (
                     <ScrollArea className="flex-1 pr-4">
-                        <div className="grid grid-cols-1 gap-3">
+                        <div className="flex flex-col border-t border-zinc-900">
                             {filtered.map((m) => (
                                 <Link
                                     key={m.id}
                                     to={`/history/${m.id}`}
-                                    className="flex items-center justify-between p-4 rounded-2xl bg-black border border-zinc-800/80 hover:border-zinc-700 hover:bg-zinc-900/80 transition-all group"
+                                    className="flex flex-col md:flex-row md:items-center justify-between py-6 border-b border-zinc-900 hover:bg-zinc-900/20 transition-colors group px-2 gap-4"
                                 >
-                                    <div className="flex items-center gap-4">
-                                        <div className="h-10 w-10 rounded-full bg-indigo-500/10 flex items-center justify-center border border-indigo-500/20">
-                                            <FileText size={16} className="text-indigo-400" />
-                                        </div>
-                                        <div>
-                                            <h3 className="text-white font-semibold text-base">{m.title}</h3>
-                                            <div className="flex items-center gap-3 text-xs text-zinc-500 mt-1 font-mono">
-                                                <span>{new Date(m.date).toLocaleString()}</span>
-                                                <span className="w-1 h-1 rounded-full bg-zinc-700"></span>
-                                                <span className="uppercase text-indigo-400/80">{m.target_lang}</span>
-                                                <span className="w-1 h-1 rounded-full bg-zinc-700"></span>
-                                                <span>{m.transcription.split(" ").length} words</span>
-                                            </div>
+                                    <div className="flex-1">
+                                        <h3 className="text-white font-bold text-xl md:text-2xl tracking-tight group-hover:translate-x-2 transition-transform duration-500">{m.title}</h3>
+                                        <div className="flex flex-wrap items-center gap-4 text-[9px] uppercase tracking-[0.2em] text-zinc-600 mt-2">
+                                            <span>{new Date(m.date).toLocaleDateString()}</span>
+                                            <span className="text-white/40">{m.target_lang}</span>
+                                            <span>{m.transcription.split(" ").length} w</span>
                                         </div>
                                     </div>
-                                    <div className="flex items-center gap-2">
+                                    <div className="flex items-center gap-6">
                                         <button
                                             onClick={(e) => handleCopy(e, m)}
-                                            className="w-8 h-8 rounded-full bg-zinc-800/50 hover:bg-zinc-700 flex items-center justify-center transition-colors text-zinc-400 hover:text-white"
-                                            title="Copy transcription"
+                                            className="text-[9px] uppercase tracking-[0.2em] text-zinc-600 hover:text-white transition-colors"
                                         >
-                                            {copiedId === m.id ? <Check size={14} className="text-green-400" /> : <Copy size={14} />}
+                                            {copiedId === m.id ? "Copied" : "Copy"}
                                         </button>
-                                        <div className="w-8 h-8 rounded-full bg-zinc-800 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                                            <ChevronRight size={16} className="text-white" />
+                                        <div className="opacity-0 group-hover:opacity-100 transition-all duration-500 group-hover:translate-x-1">
+                                            <span className="text-[10px] uppercase tracking-[0.2em] text-white">Read</span>
                                         </div>
                                     </div>
                                 </Link>
                             ))}
                             {filtered.length === 0 && search && (
-                                <p className="text-center text-zinc-500 py-10">No results found for "{search}"</p>
+                                <p className="text-zinc-600 text-[10px] uppercase tracking-[0.2em] py-10 px-2">No results for "{search}"</p>
                             )}
                         </div>
                     </ScrollArea>

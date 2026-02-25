@@ -1,8 +1,7 @@
 import { useState, useEffect } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { useParams, useNavigate, Link } from "react-router-dom";
-import { ArrowLeft, Trash2, Copy, FileText, CheckCircle } from "lucide-react";
-import { Button } from "../components/ui/button";
+import { ArrowLeft } from "lucide-react";
 import { ScrollArea } from "../components/ui/scroll-area";
 
 interface Meeting {
@@ -58,57 +57,45 @@ export function MeetingDetail() {
     if (!meeting) return <div className="p-10 text-white font-mono">Loading decrypted vault...</div>;
 
     return (
-        <div className="flex-1 flex flex-col h-screen bg-zinc-950 p-8 space-y-6">
+        <div className="flex-1 flex flex-col h-screen bg-black p-4 md:p-12 space-y-12">
 
-            <header className="flex items-start justify-between">
-                <div className="space-y-4">
-                    <Link to="/history" className="text-zinc-500 hover:text-white flex items-center gap-1 text-sm font-medium transition-colors">
-                        <ArrowLeft size={16} /> Back to History
+            <header className="flex items-start justify-between border-b border-zinc-900 pb-8">
+                <div className="space-y-6">
+                    <Link to="/history" className="text-[10px] uppercase tracking-[0.2em] text-zinc-500 hover:text-white flex items-center gap-2 transition-colors">
+                        <ArrowLeft size={12} /> BACK TO VAULT
                     </Link>
-                    <h2 className="text-4xl font-extrabold text-white tracking-tight">{meeting.title}</h2>
-                    <div className="flex items-center gap-3 text-xs text-zinc-400 font-mono">
+                    <h2 className="text-4xl md:text-6xl font-black text-white tracking-tighter">{meeting.title}</h2>
+                    <div className="flex items-center gap-4 text-[9px] uppercase tracking-[0.2em] text-zinc-600">
                         <span>{new Date(meeting.date).toLocaleString()}</span>
-                        <span className="w-1 h-1 rounded-full bg-zinc-700"></span>
-                        <span className="uppercase text-indigo-400">{meeting.target_lang}</span>
-                        <span className="w-1 h-1 rounded-full bg-zinc-700"></span>
-                        <span>ID: {meeting.id}</span>
+                        <span className="text-white/40">{meeting.target_lang}</span>
+                        <span>{meeting.id}</span>
                     </div>
                 </div>
 
-                <div className="flex gap-4 items-center">
-                    <Button
+                <div className="flex gap-8 items-center pt-8">
+                    <button
                         onClick={handleCopy}
-                        variant="outline"
-                        className="border-zinc-800 bg-black text-white hover:bg-zinc-900 rounded-xl px-4"
+                        className="text-[10px] uppercase tracking-[0.2em] text-white hover:text-zinc-400 transition-colors"
                     >
-                        {copied ? <CheckCircle size={16} className="mr-2 text-green-400" /> : <Copy size={16} className="mr-2" />}
-                        {copied ? "Copied" : "Copy All"}
-                    </Button>
-                    <Button
+                        {copied ? "COPIED" : "COPY ALL"}
+                    </button>
+                    <button
                         onClick={handleDelete}
-                        variant="destructive"
-                        className="bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white border border-red-500/20 rounded-xl px-4"
+                        className="text-[10px] uppercase tracking-[0.2em] text-red-600 hover:text-red-400 transition-colors"
                     >
-                        <Trash2 size={16} className="mr-2" /> Delete
-                    </Button>
+                        DELETE
+                    </button>
                 </div>
             </header>
 
-            <div className="flex-1 bg-white rounded-3xl p-8 shadow-2xl overflow-hidden flex flex-col relative text-black">
+            <div className="flex-1 overflow-hidden flex flex-col relative pb-12">
                 <ScrollArea className="flex-1 pr-6">
-                    <div className="max-w-3xl mx-auto py-4">
-                        <div className="flex items-center gap-3 mb-8 opacity-40">
-                            <FileText size={24} />
-                            <span className="font-mono text-sm tracking-widest uppercase font-bold">Encrypted Vault Transcription</span>
-                        </div>
-
-                        <div className="prose prose-zinc prose-lg max-w-none">
-                            {meeting.transcription.split('\n\n').map((paragraph, index) => (
-                                <p key={index} className="text-zinc-800 leading-relaxed font-serif text-lg tracking-wide mb-6">
-                                    {paragraph}
-                                </p>
-                            ))}
-                        </div>
+                    <div className="max-w-4xl py-4 space-y-8">
+                        {meeting.transcription.split('\n\n').map((paragraph, index) => (
+                            <p key={index} className="text-2xl md:text-3xl text-zinc-300 leading-[1.4] font-medium tracking-tight">
+                                {paragraph}
+                            </p>
+                        ))}
                     </div>
                 </ScrollArea>
             </div>

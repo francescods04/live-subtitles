@@ -6,7 +6,6 @@ import { Button } from "../components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../components/ui/select";
 import { Label } from "../components/ui/label";
 import { ScrollArea } from "../components/ui/scroll-area";
-import { Mic, Activity, Settings, Save, Volume2, Copy, CheckCircle } from "lucide-react";
 
 interface AudioLevelPayload {
     rms: number;
@@ -136,124 +135,121 @@ export function LiveMeeting() {
     };
 
     return (
-        <div className="flex-1 flex flex-col h-screen bg-zinc-950 p-8 space-y-6">
+        <div className="flex-1 flex flex-col h-screen bg-black p-4 md:p-12 space-y-12">
 
             {/* Header & Configuration */}
-            <header className="flex items-start justify-between">
-                <div className="space-y-1">
+            <header className="flex flex-col md:flex-row items-start md:items-end justify-between gap-8 md:gap-0">
+                <div className="space-y-2 w-full md:w-auto">
                     <Input
                         value={meetingTitle}
                         onChange={(e) => setMeetingTitle(e.target.value)}
-                        placeholder="Meeting Title..."
-                        className="text-4xl font-extrabold bg-transparent border-none outline-none shadow-none text-white p-0 h-auto placeholder:text-zinc-700/50 focus-visible:ring-0"
+                        placeholder="Untitled Session."
+                        className="text-4xl md:text-6xl font-black bg-transparent border-none outline-none shadow-none text-white p-0 h-auto placeholder:text-zinc-800 focus-visible:ring-0 tracking-tighter"
                     />
-                    <p className="text-zinc-500 font-mono text-xs">Waiting for audio stream...</p>
+                    <div className="h-[1px] w-12 bg-zinc-800 my-4" />
+                    <p className="text-zinc-600 font-mono text-[10px] uppercase tracking-[0.2em]">{isListening ? "Listening..." : "Idle."}</p>
                 </div>
 
-                <div className="flex gap-4 items-center bg-black border border-zinc-800 p-2 pl-4 rounded-2xl shadow-xl">
-                    <div className="flex flex-col gap-1 w-[180px]">
-                        <Label className="text-[10px] uppercase text-zinc-500 flex items-center gap-1"><Settings size={10} /> API Key</Label>
+                <div className="flex flex-wrap md:flex-nowrap gap-6 items-end">
+                    <div className="flex flex-col gap-2 w-[160px] group">
+                        <Label className="text-[9px] uppercase tracking-[0.2em] text-zinc-600 group-hover:text-zinc-400 transition-colors flex items-center gap-2">API Key</Label>
                         <Input
                             type="password"
                             placeholder="sk-..."
                             value={apiKey}
                             onChange={(e) => setApiKey(e.target.value)}
                             disabled={isListening || loading}
-                            className="h-8 text-xs bg-zinc-900 border-zinc-800"
+                            className="h-auto py-2 text-xs bg-transparent border-b border-zinc-800 rounded-none px-0 text-white placeholder:text-zinc-800 focus-visible:ring-0 focus-visible:border-white transition-colors"
                         />
                     </div>
-                    <div className="flex flex-col gap-1 w-[120px]">
-                        <Label className="text-[10px] uppercase text-zinc-500">Target Lang</Label>
+                    <div className="flex flex-col gap-2 w-[100px] group">
+                        <Label className="text-[9px] uppercase tracking-[0.2em] text-zinc-600 group-hover:text-zinc-400 transition-colors">Language</Label>
                         <Select value={targetLang} onValueChange={setTargetLang} disabled={isListening || loading}>
-                            <SelectTrigger className="h-8 text-xs bg-zinc-900 border-zinc-800">
+                            <SelectTrigger className="h-auto py-2 text-xs bg-transparent border-b border-zinc-800 rounded-none px-0 text-white focus:ring-0 focus-visible:ring-0 focus:ring-offset-0 focus-visible:border-white transition-colors">
                                 <SelectValue placeholder="Lang" />
                             </SelectTrigger>
-                            <SelectContent className="bg-zinc-900 border-zinc-800">
-                                <SelectItem value="English">English</SelectItem>
-                                <SelectItem value="Italiano">Italiano</SelectItem>
-                                <SelectItem value="Español">Español</SelectItem>
-                                <SelectItem value="Français">Français</SelectItem>
+                            <SelectContent className="bg-black border-zinc-800 text-white rounded-none">
+                                <SelectItem value="English" className="focus:bg-zinc-900">English</SelectItem>
+                                <SelectItem value="Italiano" className="focus:bg-zinc-900">Italiano</SelectItem>
+                                <SelectItem value="Español" className="focus:bg-zinc-900">Español</SelectItem>
+                                <SelectItem value="Français" className="focus:bg-zinc-900">Français</SelectItem>
                             </SelectContent>
                         </Select>
                     </div>
 
-                    <div className="flex flex-col gap-1 w-[130px]">
-                        <Label className="text-[10px] uppercase text-zinc-500">Audio Source</Label>
+                    <div className="flex flex-col gap-2 w-[110px] group">
+                        <Label className="text-[9px] uppercase tracking-[0.2em] text-zinc-600 group-hover:text-zinc-400 transition-colors">Source</Label>
                         <Select value={audioSource} onValueChange={setAudioSource} disabled={isListening || loading}>
-                            <SelectTrigger className="h-8 text-xs bg-zinc-900 border-zinc-800">
+                            <SelectTrigger className="h-auto py-2 text-xs bg-transparent border-b border-zinc-800 rounded-none px-0 text-white focus:ring-0 focus-visible:ring-0 focus:ring-offset-0 focus-visible:border-white transition-colors">
                                 <SelectValue placeholder="Source" />
                             </SelectTrigger>
-                            <SelectContent className="bg-zinc-900 border-zinc-800">
-                                <SelectItem value="mic">
-                                    <div className="flex items-center gap-2"><Mic size={12} /> Microphone</div>
+                            <SelectContent className="bg-black border-zinc-800 text-white rounded-none">
+                                <SelectItem value="mic" className="focus:bg-zinc-900">
+                                    <div className="flex items-center gap-2 tracking-widest uppercase text-[10px]">Mic</div>
                                 </SelectItem>
-                                <SelectItem value="output">
-                                    <div className="flex items-center gap-2"><Volume2 size={12} /> System Audio</div>
+                                <SelectItem value="output" className="focus:bg-zinc-900">
+                                    <div className="flex items-center gap-2 tracking-widest uppercase text-[10px]">System</div>
                                 </SelectItem>
                             </SelectContent>
                         </Select>
                     </div>
-                    <div className="mx-2 w-[1px] h-8 bg-zinc-800"></div>
-                    {!isListening ? (
-                        <Button
-                            onClick={handleStart}
-                            disabled={loading || !apiKey}
-                            className="bg-white text-black hover:bg-zinc-300 font-bold rounded-xl h-10 px-6 transition-all"
-                        >
-                            <Mic size={16} className="mr-2" /> Start Live
-                        </Button>
-                    ) : (
-                        <Button
-                            onClick={handleStopAndSave}
-                            className="bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white font-bold rounded-xl h-10 px-6 transition-all border border-red-500/20"
-                        >
-                            <Save size={16} className="mr-2" /> End & Save
-                        </Button>
-                    )}
+
+                    <div className="ml-4">
+                        {!isListening ? (
+                            <Button
+                                onClick={handleStart}
+                                disabled={loading || !apiKey}
+                                className="bg-white text-black hover:bg-zinc-200 font-bold rounded-none h-10 px-8 transition-transform hover:scale-105 active:scale-95 disabled:opacity-50 disabled:hover:scale-100 uppercase tracking-widest text-[10px]"
+                            >
+                                Record
+                            </Button>
+                        ) : (
+                            <Button
+                                onClick={handleStopAndSave}
+                                className="bg-red-600 text-white hover:bg-red-500 font-bold rounded-none h-10 px-8 transition-transform hover:scale-105 active:scale-95 uppercase tracking-widest text-[10px]"
+                            >
+                                Save
+                            </Button>
+                        )}
+                    </div>
                 </div>
             </header>
 
-            {errorMsg && <div className="text-sm font-medium text-amber-500">{errorMsg}</div>}
+            {errorMsg && <div className="text-xs uppercase tracking-widest text-red-500 font-medium">{errorMsg}</div>}
 
-            {/* Notion-style Notetaker Sheet */}
-            <div className="flex-1 bg-zinc-900/40 rounded-3xl border border-zinc-800/50 p-8 shadow-inner overflow-hidden flex flex-col relative">
+            {/* Notion-style Notetaker Sheet -> Minimalist Canvas */}
+            <div className="flex-1 overflow-hidden flex flex-col relative">
 
                 {isListening && (
-                    <div className="absolute top-6 right-8 flex items-center gap-4">
-                        <Button
-                            variant="ghost"
-                            size="sm"
+                    <div className="absolute top-0 right-0 z-50 flex items-center gap-6">
+                        <button
                             onClick={handleCopyAll}
-                            className="h-7 text-[10px] uppercase tracking-wider text-zinc-400 hover:text-white bg-white/5 border border-white/10"
+                            className="text-[9px] uppercase tracking-[0.2em] text-zinc-500 hover:text-white transition-colors flex items-center gap-2"
                         >
-                            {copied ? <CheckCircle size={12} className="mr-1 text-green-400" /> : <Copy size={12} className="mr-1" />}
-                            {copied ? "Copied" : "Copy Live"}
-                        </Button>
+                            {copied ? <span className="text-white">Copied</span> : <span>Copy Live</span>}
+                        </button>
                         <span className="text-xs font-mono text-zinc-500 uppercase tracking-widest animate-pulse">Recording</span>
                         <div
-                            className="p-1.5 rounded-full bg-red-500/20 text-red-400 transition-transform duration-75"
-                            style={{ transform: `scale(${1 + audioLevel / 100})`, boxShadow: `0 0 ${audioLevel / 2}px rgba(239, 68, 68, 0.4)` }}
-                        >
-                            <Activity size={14} />
-                        </div>
+                            className="w-2 h-2 rounded-full bg-red-500 transition-transform duration-75 shadow-[0_0_10px_rgba(239,68,68,0.8)]"
+                            style={{ transform: `scale(${1 + audioLevel / 50})` }}
+                        />
                     </div>
                 )}
 
                 {transcripts.length === 0 ? (
-                    <div className="flex-1 flex flex-col items-center justify-center text-zinc-700 space-y-4">
-                        <Mic size={48} className="opacity-20" />
-                        <p className="font-medium text-xl opacity-40">Press 'Start Live' to begin transcribing.</p>
+                    <div className="flex-1 flex flex-col justify-center text-zinc-800">
+                        <p className="font-light text-2xl tracking-tight max-w-md">Hit Record to begin transcribing.</p>
                     </div>
                 ) : (
                     <ScrollArea className="flex-1 pr-6">
-                        <div className="space-y-6 pb-20 max-w-4xl mx-auto">
+                        <div className="space-y-8 pb-20 max-w-3xl">
                             {transcripts.map((text, idx) => (
-                                <div key={idx} className="group animate-in fade-in slide-in-from-bottom-2 duration-500">
-                                    <div className="flex gap-4">
-                                        <div className="w-12 text-right pt-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                            <span className="text-[10px] font-mono text-zinc-600">Block {idx + 1}</span>
+                                <div key={idx} className="group animate-in fade-in slide-in-from-bottom-2 duration-700">
+                                    <div className="flex gap-6 items-start">
+                                        <div className="mt-2 opacity-0 group-hover:opacity-100 transition-opacity duration-500">
+                                            <span className="text-[9px] uppercase tracking-[0.2em] text-zinc-700">{String(idx + 1).padStart(2, '0')}</span>
                                         </div>
-                                        <p className="flex-1 text-lg text-zinc-300 leading-relaxed font-medium">
+                                        <p className="flex-1 text-2xl md:text-3xl text-zinc-300 leading-[1.4] font-medium tracking-tight">
                                             {text}
                                         </p>
                                     </div>

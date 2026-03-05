@@ -2,11 +2,10 @@ import { useState, useEffect, useRef } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { Input } from "../components/ui/input";
-import { Button } from "../components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../components/ui/select";
 import { Label } from "../components/ui/label";
 import { ScrollArea } from "../components/ui/scroll-area";
-import { Play, Square, Settings, Maximize2, X, AlertCircle } from "lucide-react";
+import { Play, Square, Settings, AlertCircle } from "lucide-react";
 
 interface AudioLevelPayload {
     rms: number;

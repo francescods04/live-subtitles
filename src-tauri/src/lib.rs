@@ -130,7 +130,7 @@ pub struct AppState {
 }
 
 #[tauri::command]
-async fn start_listening(api_key: String, spoken_lang: String, target_lang: String, trans_model: String, source: String, app: AppHandle) -> Result<(), String> {
+async fn start_listening(api_key: String, provider: String, spoken_lang: String, target_lang: String, trans_model: String, source: String, app: AppHandle) -> Result<(), String> {
     let state = app.state::<AppState>();
     
     if state.is_listening.load(Ordering::Relaxed) {
@@ -145,6 +145,7 @@ async fn start_listening(api_key: String, spoken_lang: String, target_lang: Stri
     let is_listening_clone = state.is_listening.clone();
     let app_clone = app.clone();
     let api_key_clone = api_key.clone();
+    let provider_clone = provider.clone();
     let spoken_lang_clone = spoken_lang.clone();
     let target_lang_clone = target_lang.clone();
     let trans_model_clone = trans_model.clone();
@@ -154,6 +155,7 @@ async fn start_listening(api_key: String, spoken_lang: String, target_lang: Stri
 
     // 1. THREAD TRADUTTORE
     let api_key_worker = api_key_clone.clone();
+    let provider_worker = provider_clone.clone();
     let spoken_lang_worker = spoken_lang_clone.clone();
     let target_lang_worker = target_lang_clone.clone();
     let trans_model_worker = trans_model_clone.clone();
@@ -168,7 +170,7 @@ async fn start_listening(api_key: String, spoken_lang: String, target_lang: Stri
                 let temp_guard = SafeTempFile { path: filepath };
                 
                 let result = tauri::async_runtime::block_on(
-                    translate_audio_with_openai(&temp_guard.path, &api_key_worker, &spoken_lang_worker, &target_lang_worker, &trans_model_worker)
+                    translate_audio_with_openai(&temp_guard.path, &api_key_worker, &provider_worker, &spoken_lang_worker, &target_lang_worker, &trans_model_worker)
                 );
                 
                 match result {
@@ -372,25 +374,36 @@ fn map_lang_to_iso(lang_name: &str) -> &'static str {
     }
 }
 
-async fn translate_audio_with_openai(filepath: &std::path::Path, api_key: &str, spoken_lang: &str, target_lang: &str, trans_model: &str) -> anyhow::Result<String> {
+async fn translate_audio_with_openai(filepath: &std::path::Path, api_key: &str, provider: &str, spoken_lang: &str, target_lang: &str, trans_model: &str) -> anyhow::Result<String> {
     let client = reqwest::Client::new();
     let audio_file = tokio::fs::read(filepath).await?;
     let iso_lang = map_lang_to_iso(spoken_lang);
     
-    // Se target_lang == English E spoken_lang != English, possiamo usare le Translations API di Whisper
+    let is_openai = provider.to_lowercase() == "openai";
+    let base_url = if is_openai {
+        "https://api.openai.com/v1"
+    } else {
+        "https://api.groq.com/openai/v1"
+    };
+
+    let audio_model = if is_openai {
+        "whisper-1"
+    } else {
+        "whisper-large-v3"
+    };
+
+    // Se target_lang == English E spoken_lang != English, possiamo usare le Translations API
     if target_lang.starts_with("English") && !spoken_lang.eq_ignore_ascii_case("English") {
         let file_part = multipart::Part::bytes(audio_file)
             .file_name("audio.wav");
 
         let form = multipart::Form::new()
-            .text("model", "whisper-large-v3")
-            // Passiamo un prompt per aiutare Whisper a capire meglio la lingua di origine, 
-            // ma l'endpoint translations purtroppo non supporta parametro `language` in Groq come fa transcriptions.
-            .text("prompt", format!("The source audio is spoken in {}. Translate it perfectly into English.", spoken_lang))
+            .text("model", audio_model)
+            // HALLUCINATION FIX: Completely removed the instructions from the 'prompt' field.
             .part("file", file_part);
 
         let res = client
-            .post("https://api.groq.com/openai/v1/audio/translations")
+            .post(format!("{}/audio/translations", base_url))
             .bearer_auth(api_key)
             .multipart(form)
             .send()
@@ -401,7 +414,7 @@ async fn translate_audio_with_openai(filepath: &std::path::Path, api_key: &str, 
             Ok(json_resp.text)
         } else {
             let err_text = res.text().await?;
-            Err(anyhow::anyhow!("API Error: {}", err_text))
+            Err(anyhow::anyhow!("API Error (Translations): {}", err_text))
         }
     } else {
         // HYBRID PIPELINE
@@ -410,12 +423,12 @@ async fn translate_audio_with_openai(filepath: &std::path::Path, api_key: &str, 
             .file_name("audio.wav");
 
         let form = multipart::Form::new()
-            .text("model", "whisper-large-v3")
+            .text("model", audio_model)
             .text("language", iso_lang) // <-- QUI IL HUGE ACCURACY BOOST
             .part("file", file_part);
 
         let trans_res = client
-            .post("https://api.groq.com/openai/v1/audio/transcriptions")
+            .post(format!("{}/audio/transcriptions", base_url))
             .bearer_auth(api_key)
             .multipart(form)
             .send()
@@ -429,7 +442,7 @@ async fn translate_audio_with_openai(filepath: &std::path::Path, api_key: &str, 
                 return Ok(String::new());
             }
             
-            // Se le lingue coincidono, non abbiamo bisogno della traduzione LLaMA!
+            // Se le lingue coincidono, non abbiamo bisogno della traduzione LLM!
             if spoken_lang.eq_ignore_ascii_case(target_lang) {
                 return Ok(transcribed_text.to_string());
             }
@@ -451,7 +464,7 @@ async fn translate_audio_with_openai(filepath: &std::path::Path, api_key: &str, 
             });
 
             let chat_res = client
-                .post("https://api.groq.com/openai/v1/chat/completions")
+                .post(format!("{}/chat/completions", base_url))
                 .bearer_auth(api_key)
                 .json(&chat_req)
                 .send()

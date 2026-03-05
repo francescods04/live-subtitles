@@ -16,6 +16,7 @@ interface SubtitlePayload {
 
 export function LiveMeeting() {
     const [apiKey, setApiKey] = useState("");
+    const [aiProvider, setAiProvider] = useState("groq");
     const [spokenLang, setSpokenLang] = useState("Italian");
     const [targetLang, setTargetLang] = useState("English");
     const [transModel, setTransModel] = useState("llama-3.1-8b-instant");
@@ -32,11 +33,21 @@ export function LiveMeeting() {
     // Carica dal localStorage al primo avvio
     useEffect(() => {
         setApiKey(localStorage.getItem("openai_api_key") || "");
+        setAiProvider(localStorage.getItem("ai_provider") || "groq");
         setSpokenLang(localStorage.getItem("spoken_lang") || "Italian");
         setTargetLang(localStorage.getItem("target_lang") || "English");
         setTransModel(localStorage.getItem("trans_model") || "llama-3.1-8b-instant");
         setAudioSource(localStorage.getItem("audio_source") || "mic");
     }, []);
+
+    // Reimposta il modello corretto se l'utente cambia provider
+    useEffect(() => {
+        if (aiProvider === "openai") {
+            setTransModel("gpt-4o-mini");
+        } else if (aiProvider === "groq" && transModel.startsWith("gpt")) {
+            setTransModel("llama-3.1-8b-instant");
+        }
+    }, [aiProvider]);
 
     // Ascolta gli eventi audio _e_ testo da Rust
     useEffect(() => {
@@ -92,11 +103,19 @@ export function LiveMeeting() {
 
         try {
             localStorage.setItem("openai_api_key", apiKey);
+            localStorage.setItem("ai_provider", aiProvider);
             localStorage.setItem("spoken_lang", spokenLang);
             localStorage.setItem("target_lang", targetLang);
             localStorage.setItem("trans_model", transModel);
             localStorage.setItem("audio_source", audioSource);
-            await invoke("start_listening", { apiKey, spokenLang, targetLang, transModel, source: audioSource });
+            await invoke("start_listening", {
+                apiKey,
+                provider: aiProvider,
+                spokenLang,
+                targetLang,
+                transModel,
+                source: audioSource
+            });
             setIsListening(true);
         } catch (err: any) {
             setErrorMsg(err.toString());
@@ -232,6 +251,18 @@ export function LiveMeeting() {
                                     />
                                 </div>
                                 <div className="flex flex-col gap-2">
+                                    <Label className="uppercase tracking-[0.2em] text-[9px] text-zinc-500">AI Provider</Label>
+                                    <Select value={aiProvider} onValueChange={setAiProvider} disabled={isListening || loading}>
+                                        <SelectTrigger className="h-8 text-xs bg-black/50 border border-zinc-800 rounded-lg text-white">
+                                            <SelectValue placeholder="Provider" />
+                                        </SelectTrigger>
+                                        <SelectContent className="bg-black border-zinc-800 text-white rounded-lg">
+                                            <SelectItem value="groq">Groq (Fast)</SelectItem>
+                                            <SelectItem value="openai">OpenAI (Accurate)</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                                <div className="flex flex-col gap-2">
                                     <Label className="uppercase tracking-[0.2em] text-[9px] text-zinc-500">Audio Source</Label>
                                     <Select value={audioSource} onValueChange={setAudioSource} disabled={isListening || loading}>
                                         <SelectTrigger className="h-8 text-xs bg-black/50 border border-zinc-800 rounded-lg text-white">
@@ -250,8 +281,18 @@ export function LiveMeeting() {
                                             <SelectValue placeholder="Model" />
                                         </SelectTrigger>
                                         <SelectContent className="bg-black border-zinc-800 text-white rounded-lg">
-                                            <SelectItem value="llama-3.1-8b-instant">Fast (8B)</SelectItem>
-                                            <SelectItem value="llama-3.3-70b-versatile">Contextual (70B)</SelectItem>
+                                            {aiProvider === "groq" ? (
+                                                <>
+                                                    <SelectItem value="llama-3.1-8b-instant">Fast (8B)</SelectItem>
+                                                    <SelectItem value="llama-3.3-70b-versatile">Contextual (70B)</SelectItem>
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <SelectItem value="gpt-4o-mini">GPT-4o Mini</SelectItem>
+                                                    <SelectItem value="gpt-4o">GPT-4o</SelectItem>
+                                                    <SelectItem value="gpt-5-nano-2025-08-07">GPT-5 Nano</SelectItem>
+                                                </>
+                                            )}
                                         </SelectContent>
                                     </Select>
                                 </div>
